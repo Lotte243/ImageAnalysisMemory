@@ -1,0 +1,52 @@
+%% test script to test if a black background would work
+close all
+clear all 
+clc
+
+
+
+addpath('./Images_advanced');
+
+test_img = imread('Img_test.jpg');
+
+imgray = rgb2gray(test_img); 
+imred = test_img(:,:,1);
+imgr = test_img(:,:,2);
+imblue = test_img(:,:,3);
+
+% filteredGray = medfilt2(imgray, [5 5]);
+% se = strel('disk', 5);
+% closedGray = imclose(filteredGray, se);
+% 
+% 
+% T = adaptthresh(closedGray, 0.4);
+% binaryMask = imbinarize(closedGray, T);
+% 
+% binaryM = ~binaryMask;
+% 
+% binaryM_op = bwareaopen(binaryM, 50);
+% binaryM_fill = imfill(binaryM_op, 'holes');
+% 
+% maskedImage = test_img;
+% maskedImage(repmat(~binaryM_fill, [1, 1, size(test_img, 3)])) = 0;
+% 
+% figure;
+% subplot(1, 3, 1);
+% imshow(test_img);
+% subplot(1, 3, 2);
+% imshow(binaryM_fill);
+% subplot(1,3, 3);
+% imshow(maskedImage);
+
+% Turn the image into a binary image
+BW = imbinarize(imgray);
+
+% Since the table is lighter than the cards, the table is seen as the
+% foreground, switch the values around so the cards become the foreground
+BWin = ~BW;
+
+% Fill the wholes in the binary image, so most of the card is covered with
+% a binary mask
+binary_im = imfill(BW,'holes');
+
+figure; imagesc(binary_im)

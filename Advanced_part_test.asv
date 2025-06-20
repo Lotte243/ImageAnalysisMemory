@@ -1,0 +1,146 @@
+%% Project advanced test
+% This script is to test the advanced part of the project
+
+clear all
+close all
+clc
+
+
+addpath('./functions');
+addpath('./Images_advanced');
+
+%% Load images
+
+images = load_images_advanced(); 
+
+img_n = 1;              % Start with the first image
+image = images{img_n};  
+im = rgb2gray(image); 
+
+% Turn the image into a binary image
+BW = imbinarize(im);
+
+% % Since the table is lighter than the cards, the table is seen as the
+% % foreground, switch the values around so the cards become the foreground
+% BWin = ~BW;
+
+% Fill the wholes in the binary image, so most of the card is covered with
+% a binary mask
+binary_im = imfill(BW,'holes');  % Make a binary image of the first image
+
+stats = regionprops(binary_im,'Boundingbox','Area','Centroid', 'Orientation');
+n_i = 1;
+figure; 
+imagesc(binary_im);
+
+[B,L,n] = bwboundaries(binary_im,'noholes');
+m = 1;
+h = 1;
+for k = 1:n
+    b = B{k};
+    if length(b) > 500
+        boun{m} = b;
+        m = m + 1;
+       
+    end
+    if stats(k).Area > 10000
+        box{h} = stats(k);
+        h = h + 1;
+    end
+end
+
+
+for t = 1:length(box)
+    pos = box{t}.BoundingBox;
+    card = imcrop(im,pos);
+
+    points = detectSIFTFeatures(card);
+    [d1, valid_points_1] = extractFeatures(card,points);
+
+    desc_back{t} = d1;
+
+end
+
+
+
+figure;
+imshow(image);
+hold on
+for h = 1:length(boun)
+    boundary = boun{h};
+    plot(boundary(:,2),boundary(:,1),'b','LineWidth',2)
+
+end
+
+
+%% To play the game 
+% To play the game, first create with region props squares around the cards
+% like before to extract them. Then look if they are face up or face down
+% with percentage of yellow in the images. If they are face up do SIFT
+% description and use BWbounderies on only that part to create the
+% boundaries around the card, so the boundaries have the shape of the
+% cards.
+
+current_player = 1;
+score_1 = 0;
+score_2 = 0;
+
+for n = 2:length(images)
+    box = [];
+    card_up = [];
+    card_down = [];
+    matches_up = [];
+    box_c = [];
+
+    image = images{n};
+    % 
+    % if n == 2 
+    %     [width_incr,height_incr] = size_face_up_cards(image);
+    % end
+
+    binary_im = binarize_image(image);  % Make a binary image of the first image
+
+    % create bounding boxes around cards
+    stats_c = regionprops(binary_im,'Boundingbox','Area','Centroid', 'Orientation');
+
+    % Take only bounding boxes around the cards it self by checking that
+    % area is large enough to be around a card
+    c = 1;
+    for i = 1:length(stats_c)
+        if stats_c(i).Area > 10000
+            box_c{c} = stats_c(i);
+            c = c + 1;
+        end 
+    end 
+
+    % Create masks over the cards in the bounding box
+    stats_mask = create_mask_card(box_c, binary_im);
+
+    % See which cards are up and which are down
+    [card_up,card_down] = card_up_or_down_advaned(stats_mask, image);
+
+    imgray = rgb2gray(image);
+
+    descriptors = [];
+    for h = 1:2
+        box = card_up{h}.BoundingBox;
+        card_c{h} = imcrop(imgray,box);
+        points_c{h} = detectSIFTFeatures(card_c{h});
+        [desc, validpoints{h}] = extractFeatures(card_c{h},points_c{h});
+        descriptors{h} = desc;
+    end
+
+    matches_up = matchFeatures(descriptors{1},descriptors{2},'Method','Exhaus','MaxRatio',0.8,'MatchThreshold',10);
+    n_matches = length(matches_up)
+    
+
+    create_boundary_advanced(card_up,image,binary_im,matches_up)
+matchedPoints1 = validpoints{1}(matches_up(:,1),:);
+matchedPoints2 = validpoints{2}(matches_up(:,2),:);
+ figure; 
+ showMatchedFeatures(card_c{1},card_c{2},matchedPoints1,matchedPoints2);
+
+
+
+end
+

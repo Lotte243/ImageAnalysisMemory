@@ -1,0 +1,39 @@
+function [match] = matching_cards(card_up,img)
+% This function takes the image of all the cards and the positions of the
+% two cards that are face up and determines whether they are a matching
+% pair or not by matching the SIFT features and seeing if they have more
+% than 15 matching features
+
+pos_card_1 = card_up(1).Position;
+pos_card_2 = card_up(2).Position;
+
+
+
+% Get the two face up cards as a gray image
+card_1 = rgb2gray(imcrop(img,pos_card_1));
+card_2 = rgb2gray(imcrop(img,pos_card_2));
+
+% crop the cards fur
+crop_card = [20, 20, 180, 180];
+
+card_1_crop = imcrop(card_1,crop_card);
+card_2_crop = imcrop(card_2, crop_card);
+
+% Get the SIFT points of the two cards
+points_1 = detectSIFTFeatures(card_1_crop);
+points_2 = detectSIFTFeatures(card_2_crop);
+
+% Extract the SIFT features
+[d1, valid_points_1] = extractFeatures(card_1,points_1);
+[d2, valid_points_2] = extractFeatures(card_2,points_2);
+
+% Find the matches between the two cards
+matches = matchFeatures(d1,d2,'Method','Approximate','MaxRatio',0.6,'MatchThreshold',1);
+
+% If there are 10 or more matches, set variable match at 1 otherwise set it
+% at zero
+if length(matches) >= 10
+    match = 1;
+else 
+    match = 0;
+end
